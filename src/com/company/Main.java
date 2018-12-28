@@ -1,5 +1,6 @@
 package com.company;
 
+import java.security.spec.DSAGenParameterSpec;
 import java.util.*;
 
 
@@ -14,13 +15,75 @@ public class Main {
         input.add("YZE");
         input.add("DEA");
         // boolean s = new Solution().pyramidTransition("XYZ", input);
-        System.out.println(new Solution().numMatchingSubseq("abcde", new String[]{"a", "bb", "acd", "ace"}));
+        System.out.println(new Solution().minSwapsCouples(new int[]{0, 2, 1, 3}));
     }
 }
 
 class Solution {
     public int minSwapsCouples(int[] row) {
-        return 0;
+        Map<Integer, Integer> map = new HashMap<>(); // group to index
+        DJSet djSet = new DJSet(row.length);
+
+        for (int i = 0; i < row.length; i++) {
+            if (map.containsKey(row[i]/2)) {
+                djSet.union(map.get(row[i]/2), i);
+            }
+            else {
+                map.put(row[i]/2, i);
+            }
+
+            // connect even odd
+            if (i%2 == 1) {
+                djSet.union(i-1, i);
+            }
+        }
+
+        Map<Integer, Integer> compSize = new HashMap<>();
+        for (int i = 0; i < djSet.root.length; i++) {
+            int curRoot = djSet.findRoot(i);
+            compSize.put(curRoot, compSize.getOrDefault(curRoot, 0) + 1);
+        }
+
+        int swapCount = 0;
+        for (int key : compSize.keySet()) {
+            swapCount+= (compSize.get(key)/2 - 1);
+        }
+
+        return swapCount;
+    }
+
+    class DJSet {
+        int[] root;
+
+        public DJSet(int N) {
+            this.root = new int[N];
+            for (int i = 0; i < N; i++) this.root[i] = i;
+        }
+
+        public int findRoot(int i) {
+            if (i != root[i]) root[i] = findRoot(root[i]);
+
+            return root[i];
+        }
+
+        public void union(int i, int j) {
+            int rooti = findRoot(i);
+            int rootj = findRoot(j);
+            if (rooti == rootj) return;
+            root[rootj] = rooti;
+        }
+
+        public Set<Integer> count() {
+            Set<Integer> set = new HashSet<>();
+            for (int i = 0; i < root.length; i++)
+                set.add(findRoot(i));
+
+            return set;
+        }
+
+        public boolean isConnected(int i, int j) {
+            return findRoot(i) == findRoot(j);
+        }
     }
 
     public int numMatchingSubseq(String S, String[] words) {
@@ -74,39 +137,7 @@ class Solution {
     }
 
 
-    class DJSet {
-        int[] root;
 
-        public DJSet(int N) {
-            this.root = new int[N];
-            for (int i = 0; i < N; i++) this.root[i] = i;
-        }
-
-        public int findRoot(int i) {
-            if (i != root[i]) root[i] = findRoot(root[i]);
-
-            return root[i];
-        }
-
-        public void union(int i, int j) {
-            int rooti = findRoot(i);
-            int rootj = findRoot(j);
-            if (rooti == rootj) return;
-            root[rootj] = rooti;
-        }
-
-        public Set<Integer> count() {
-            Set<Integer> set = new HashSet<>();
-            for (int i = 0; i < root.length; i++)
-                set.add(findRoot(i));
-
-            return set;
-        }
-
-        public boolean isConnected(int i, int j) {
-            return findRoot(i) == findRoot(j);
-        }
-    }
 }
 
 class Interval {
