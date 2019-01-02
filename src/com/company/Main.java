@@ -4,14 +4,158 @@ import java.util.*;
 
 public class Main {
     public static void main(String[] args) {
-        //boolean s = new Solution().swimInWater();
-        //System.out.println(s);
+    int res = new Solution().rectangleArea(new int[][]{{0,0,1000000000,1000000000}});
+    System.out.println(res);
     }
 }
 
 class Solution {
-    public int[] hitBricks(int[][] grid, int[][] hits) {
+    public boolean rotateString(String A, String B) {
+        StringBuilder sb = new StringBuilder(A);
+       for (int i = 0; i <= A.length(); i++) {
+            if (sb.toString().equals(B)) return true;
+            sb.append(sb.deleteCharAt(0));
+       }
 
+       return false;
+    }
+
+    int mod = 1_000_000_007;
+    public int rectangleArea(int[][] rectangles) {
+        int[]verticalIndex = new int[rectangles.length*2];
+        for (int i = 0; i < rectangles.length; i++){
+            verticalIndex[2*i] = rectangles[i][1];
+            verticalIndex[2*i+1] = rectangles[i][3];
+        }
+
+        Arrays.sort(verticalIndex);
+        List<Node> xNodes = new ArrayList<>();
+        for (int[]rect : rectangles) {
+            xNodes.add(new Node(true, rect[1], rect[3], rect[0]));
+            xNodes.add(new Node(false, rect[1], rect[3], rect[2]));
+        }
+
+        Collections.sort(xNodes, new Comparator<Node>() {
+            @Override
+            public int compare(Node o1, Node o2) {
+                if (o1.x != o2.x) return o1.x - o2.x;
+                if (o2.isStart) return 1;
+                return -1;
+            }
+        });
+
+        int area = 0;
+        for (int i = 1; i < verticalIndex.length; i++) {
+            if (verticalIndex[i] != verticalIndex[i-1]) {
+                int height = verticalIndex[i] - verticalIndex[i-1];
+                area += findArea(xNodes, verticalIndex[i-1], verticalIndex[i]);
+                area %= mod;
+            }
+        }
+
+        return area;
+    }
+
+    private int findArea(List<Node> xNodes, int y0, int y1) {
+        int height = y1 - y0;
+        long area = 0;
+        Integer lastStartIndex = null;
+        int remainingCount = 0;
+
+        for (Node node : xNodes) {
+            if (withinHeightRange(node, y0, y1)) {
+                if (node.isStart) {
+                    remainingCount++;
+                }
+                else {
+                    remainingCount--;
+                }
+
+                if (lastStartIndex == null && node.isStart) lastStartIndex = node.x;
+
+                if (remainingCount == 0) {
+                    int curArea = node.x - lastStartIndex;
+                    area += (long)curArea * (long)height;
+                    area %= mod;
+                    lastStartIndex = null;
+                }
+            }
+        }
+
+        return (int)(area % mod);
+    }
+
+    private boolean withinHeightRange(Node node, int y0, int y1) {
+        return node.y1 >= y1 && node.y0 <= y0;
+    }
+
+    class Node{
+        boolean isStart;
+        int y0;
+        int y1;
+        int x;
+        public Node(boolean isStart, int y0, int y1, int x){
+            this.isStart = isStart; this.y0 = y0; this.y1 = y1; this.x = x;
+        }
+    }
+
+
+
+    public int[] hitBricks(int[][] grid, int[][] hits) {
+        int h = grid.length;
+        int w = grid[0].length;
+
+        DJSet djSet = new DJSet(h*w+1);
+        boolean[]isEmpty = new boolean[hits.length];
+
+        int ii = 0;
+        for (int [] hit : hits) {
+            isEmpty[ii++] = grid[hit[0]][hit[1]] == 0;
+            grid[hit[0]][hit[1]] = 0;
+        }
+
+        int[]res = new int[hits.length];
+        int[]dxy = new int[]{0, 1, 0};
+        int topIndex = h * w;
+
+        for (int i = 0; i < h; i++) {
+            for (int j = 0; j < w; j++) {
+                if (grid[i][j] == 1) {
+                    if (i == 0) djSet.union(i*w+j , topIndex);
+
+                    for(int d = 0; d < 2; d++) {
+                        int nx = i + dxy[d];
+                        int ny = j + dxy[d+1];
+                        if (nx < h && ny < w && grid[nx][ny] == 1) {
+                            djSet.union(i*w+j, nx * w + ny);
+                        }
+                    }
+                }
+            }
+        }
+
+        dxy = new int[]{-1, 0, 1, 0, -1};
+
+        for (int i = hits.length - 1; i >= 0; i--) {
+            if (!isEmpty[i]) {
+                grid[hits[i][0]][hits[i][1]] = 1;
+
+                int previousValue = djSet.size(topIndex);
+                if (hits[i][0] == 0) djSet.union(topIndex, hits[i][0]  * w + hits[i][1] );
+
+                for (int d = 0; d < 4; d++) {
+                    int newX = hits[i][0] + dxy[d];
+                    int newY = hits[i][1] + dxy[d+1];
+                    if (newX >= 0 && newX < h && newY >= 0 && newY < w && grid[newX][newY] == 1) {
+                        djSet.union(newX * w + newY, hits[i][0] * w + hits[i][1]);
+                    }
+                }
+
+                res[i] = Math.max(0, djSet.size(topIndex) - previousValue - 1);
+            }
+        }
+
+        return res;
     }
 
     public List<List<Integer>> allPathsSourceTarget(int[][] graph) {
@@ -684,12 +828,17 @@ class TreeNode {
       TreeNode right;
       TreeNode(int x) { val = x; }
   }
+
 class DJSet {
     int[] root;
-
+    int[] size;
     public DJSet(int N) {
         this.root = new int[N];
-        for (int i = 0; i < N; i++) this.root[i] = i;
+        this.size = new int[N];
+        for (int i = 0; i < N; i++) {
+            this.root[i] = i;
+            size[i] = 1;
+        }
     }
 
     public int findRoot(int i) {
@@ -703,6 +852,11 @@ class DJSet {
         int rootj = findRoot(j);
         if (rooti == rootj) return;
         root[rootj] = rooti;
+        size[rooti] += size[rootj];
+    }
+
+    public int size(int i){
+        return size[findRoot(i)];
     }
 
     public Set<Integer> count() {
