@@ -4,465 +4,302 @@ import java.util.*;
 
 public class Main {
     public static void main(String[] args) {
-    int res = new Solution().rectangleArea(new int[][]{{0,0,1000000000,1000000000}});
-    System.out.println(res);
+        //int res = new Solution().rectangleArea(new int[][]{{0,0,1000000000,1000000000}});
+        //System.out.println(res);
+        int[] step = new Solution().sumOfDistancesInTree(6, new int[][]{{0,1}, {0,2}, {2,3}, {2,4}, {2,5}});
+        System.out.println(step);
     }
 }
 
 class Solution {
-    public boolean rotateString(String A, String B) {
-        StringBuilder sb = new StringBuilder(A);
-       for (int i = 0; i <= A.length(); i++) {
-            if (sb.toString().equals(B)) return true;
-            sb.append(sb.deleteCharAt(0));
-       }
 
-       return false;
-    }
+    Map<Integer, Integer> parentMap = new HashMap<>();
+    Map<Integer, Set<Integer>> edge = new HashMap<>();
+    Map<Integer, Integer> rootCount = new HashMap<>();
+    Map<Integer, Integer> rootViewSum = new HashMap<>();
+    public int[] sumOfDistancesInTree(int N, int[][] edges) {
+        for (int []e : edges) {
+            if (!edge.containsKey(e[0])) edge.put(e[0], new HashSet<>());
+            edge.get(e[0]).add(e[1]);
 
-    int mod = 1_000_000_007;
-    public int rectangleArea(int[][] rectangles) {
-        int[]verticalIndex = new int[rectangles.length*2];
-        for (int i = 0; i < rectangles.length; i++){
-            verticalIndex[2*i] = rectangles[i][1];
-            verticalIndex[2*i+1] = rectangles[i][3];
+            if (!edge.containsKey(e[1])) edge.put(e[1], new HashSet<>());
+            edge.get(e[1]).add(e[0]);
         }
 
-        Arrays.sort(verticalIndex);
-        List<Node> xNodes = new ArrayList<>();
-        for (int[]rect : rectangles) {
-            xNodes.add(new Node(true, rect[1], rect[3], rect[0]));
-            xNodes.add(new Node(false, rect[1], rect[3], rect[2]));
-        }
+        fillRootCount(0, null);
+        fillRootView(0, null);
 
-        Collections.sort(xNodes, new Comparator<Node>() {
-            @Override
-            public int compare(Node o1, Node o2) {
-                if (o1.x != o2.x) return o1.x - o2.x;
-                if (o2.isStart) return 1;
-                return -1;
-            }
-        });
+        int[]res = new int[N];
+        res[0] = rootViewSum.get(0);
+        Queue<Integer> queue = new LinkedList<>();
+        queue.add(0);
+        while(!queue.isEmpty()) {
+            int cur = queue.remove();
 
-        int area = 0;
-        for (int i = 1; i < verticalIndex.length; i++) {
-            if (verticalIndex[i] != verticalIndex[i-1]) {
-                int height = verticalIndex[i] - verticalIndex[i-1];
-                area += findArea(xNodes, verticalIndex[i-1], verticalIndex[i]);
-                area %= mod;
-            }
-        }
-
-        return area;
-    }
-
-    private int findArea(List<Node> xNodes, int y0, int y1) {
-        int height = y1 - y0;
-        long area = 0;
-        Integer lastStartIndex = null;
-        int remainingCount = 0;
-
-        for (Node node : xNodes) {
-            if (withinHeightRange(node, y0, y1)) {
-                if (node.isStart) {
-                    remainingCount++;
-                }
-                else {
-                    remainingCount--;
-                }
-
-                if (lastStartIndex == null && node.isStart) lastStartIndex = node.x;
-
-                if (remainingCount == 0) {
-                    int curArea = node.x - lastStartIndex;
-                    area += (long)curArea * (long)height;
-                    area %= mod;
-                    lastStartIndex = null;
-                }
-            }
-        }
-
-        return (int)(area % mod);
-    }
-
-    private boolean withinHeightRange(Node node, int y0, int y1) {
-        return node.y1 >= y1 && node.y0 <= y0;
-    }
-
-    class Node{
-        boolean isStart;
-        int y0;
-        int y1;
-        int x;
-        public Node(boolean isStart, int y0, int y1, int x){
-            this.isStart = isStart; this.y0 = y0; this.y1 = y1; this.x = x;
-        }
-    }
-
-
-
-    public int[] hitBricks(int[][] grid, int[][] hits) {
-        int h = grid.length;
-        int w = grid[0].length;
-
-        DJSet djSet = new DJSet(h*w+1);
-        boolean[]isEmpty = new boolean[hits.length];
-
-        int ii = 0;
-        for (int [] hit : hits) {
-            isEmpty[ii++] = grid[hit[0]][hit[1]] == 0;
-            grid[hit[0]][hit[1]] = 0;
-        }
-
-        int[]res = new int[hits.length];
-        int[]dxy = new int[]{0, 1, 0};
-        int topIndex = h * w;
-
-        for (int i = 0; i < h; i++) {
-            for (int j = 0; j < w; j++) {
-                if (grid[i][j] == 1) {
-                    if (i == 0) djSet.union(i*w+j , topIndex);
-
-                    for(int d = 0; d < 2; d++) {
-                        int nx = i + dxy[d];
-                        int ny = j + dxy[d+1];
-                        if (nx < h && ny < w && grid[nx][ny] == 1) {
-                            djSet.union(i*w+j, nx * w + ny);
-                        }
+                for (int nextNode : edge.get(cur)) {
+                    if (nextNode != 0 && (parentMap.get(cur) == null || nextNode != parentMap.get(cur))) {
+                        queue.add(nextNode);
+                        res[nextNode] = getSumValue(nextNode, res);
                     }
                 }
-            }
-        }
-
-        dxy = new int[]{-1, 0, 1, 0, -1};
-
-        for (int i = hits.length - 1; i >= 0; i--) {
-            if (!isEmpty[i]) {
-                grid[hits[i][0]][hits[i][1]] = 1;
-
-                int previousValue = djSet.size(topIndex);
-                if (hits[i][0] == 0) djSet.union(topIndex, hits[i][0]  * w + hits[i][1] );
-
-                for (int d = 0; d < 4; d++) {
-                    int newX = hits[i][0] + dxy[d];
-                    int newY = hits[i][1] + dxy[d+1];
-                    if (newX >= 0 && newX < h && newY >= 0 && newY < w && grid[newX][newY] == 1) {
-                        djSet.union(newX * w + newY, hits[i][0] * w + hits[i][1]);
-                    }
-                }
-
-                res[i] = Math.max(0, djSet.size(topIndex) - previousValue - 1);
-            }
         }
 
         return res;
     }
 
-    public List<List<Integer>> allPathsSourceTarget(int[][] graph) {
-        return findPath(graph, 0, graph.length - 1);
+    private int getSumValue(int nextNode, int[]res) {
+        int parentNode = parentMap.get(nextNode);
+        int parentSum = res[parentNode];
+        int fromRootSum = rootViewSum.get(nextNode);
+
+        return fromRootSum + parentSum - fromRootSum - rootCount.get(nextNode) + res.length - rootCount.get(nextNode);
     }
 
-    private List<List<Integer>> findPath(int[][] graph, int start, int end) {
-        if (start == end)
-        {
-            List<List<Integer>> res = new LinkedList<>();
-            List<Integer> cur = new LinkedList<>();
-            cur.add(start);
-            res.add(cur);
-            return res;
-        }
-        else {
-            List<List<Integer>> res = new LinkedList<>();
-            for (int i = 0; i < graph[start].length; i++) {
-                if (i != start)
-                    res.addAll(findPath(graph, i, end));
+    private int fillRootView(int root, Integer previous) {
+        int sum = 0;
+        for (int nb : edge.get(root)) {
+            if(previous != null && previous == nb) continue;
+            else {
+                sum += fillRootView(nb, root) + rootCount.get(nb);
             }
-
-            for (List<Integer> cur : res) {
-                cur.add(0, start);
-            }
-
-            return res;
         }
+
+        rootViewSum.put(root, sum);
+        return sum;
     }
 
-    public int swimInWater(int[][] grid) {
-        int N = grid.length;
-        DJSet djSet = new DJSet(N * N);
+    private int fillRootCount(int root, Integer previous) {
+        int count = 1;
 
-        Map<Integer, List<int[]>> map = new HashMap<>();
-        int[] dxy = new int[]{0, 1, 0};
+        parentMap.put(root, previous);
 
-        for (int i = 0; i < N; i++)
-        {
-            for (int j = 0; j < N; j++) {
-                for (int d = 0; d < 2; d++) {
-                    int newX = i + dxy[d];
-                    int newY = i + dxy[d+1];
-                    if (newX >= 0 && newX < N && newY >= 0 && newY < N) {
-                        int diff = Math.abs(grid[i][j] - grid[newX][newY]);
-                        if (map.containsKey(diff) == false) map.put(diff, new LinkedList<>());
+        for(int nb : edge.get(root)) {
+            if(previous != null && previous == nb) continue;
+            else {
+                count += fillRootCount(nb, root);
+            }
+        }
 
-                        map.get(diff).add(new int[]{i*N + j, newX * N + newY});
+        rootCount.put(root, count);
+        return count;
+    }
+
+
+    public boolean splitArraySameAverage(int[] A) {
+        int len = A.length;
+        int sum = 0;
+        for (int a : A) sum += a;
+
+        double target = sum*1.0/len;
+        Map<Integer, Set<Integer>> canBuild = new HashMap<>();
+
+        for (int i = 0; i < len; i++) {
+            double curAverage = A[i]*1.0;
+            if (curAverage == target) return true;
+
+            for (int count = len; count >= 1; count--) {
+                if (!canBuild.containsKey(count)) continue;
+
+                for (int value : canBuild.get(count)) {
+                    int newSum = value + A[i];
+                    if (count+1 < len && target == newSum * 1.0/(count+1))
+                        return true;
+
+                    if (!canBuild.containsKey(count+1)) {
+                        canBuild.put(count+1, new HashSet<>());
                     }
+
+                    canBuild.get(count+1).add(newSum);
                 }
             }
+
+            if (!canBuild.containsKey(1))
+                canBuild.put(1, new HashSet<>());
+
+            canBuild.get(1).add(A[i]);
         }
 
-        for (int i = 1; i < N * N; i++) {
-            List<int[]> curLinked = map.get(i);
-            if (curLinked == null) continue;
+        return false;
+    }
+    public int shortestSubarray(int[] A, int K) {
+        int[] accSum = new int[A.length];
+        for (int i = 0; i < A.length; i++)
+        {
+            if (i == 0) accSum[i] = A[i];
+            else accSum[i] = A[i] + accSum[i-1];
+        }
 
-            for (int[]edge : curLinked) {
-                djSet.union(edge[0], edge[1]);
+        int[]dp = new int[A.length]; // increasing on accSum and i
+        int len = 0;
+        int bestValue = Integer.MAX_VALUE;
+        Map<Integer, Integer> indexMap = new HashMap<>();
+
+        for (int i = 0; i < A.length; i++) {
+            if (accSum[i] >= K) {
+                bestValue = Math.min(i + 1, bestValue);
             }
 
-            if (djSet.isConnected(0, N * N - 1)) return i;
-        }
+            int targetSum = accSum[i] - K;
 
-        return N*N - 1;
-    }
+            int searchIndex = Arrays.binarySearch(dp, 0, len, targetSum);
 
-    public boolean reachingPoints(int sx, int sy, int tx, int ty) {
-        if (sx == tx && sy == ty) return true;
-        if (sx > tx || sy > ty) return false;
-        while (tx >= sx && ty >= sy) {
-            if (tx == sx && ty == sy) return true;
-            if (tx > ty) {
-                int n = (tx - sx)/ty;
-                n = Math.max(n, 1);
-                tx -= n * ty;
+            if (searchIndex >= 0) {
+                bestValue = Math.min(bestValue, i - indexMap.get(searchIndex));
             }
             else {
-                int n = (ty - sy)/tx;
-                n = Math.max(n, 1);
-                ty -= n * tx;
+                searchIndex = - searchIndex - 1;
+                if (searchIndex > 0) {
+                    bestValue = Math.min(bestValue, i - indexMap.get(searchIndex - 1));
+                }
             }
+
+            int curSumIndex = Arrays.binarySearch(dp, 0, len, accSum[i]);
+
+            if (curSumIndex < 0) curSumIndex = -curSumIndex-1;
+
+            dp[curSumIndex] = accSum[i];
+            indexMap.put(curSumIndex, i);
+
+            len = curSumIndex + 1;
         }
 
-        return false;
+        return bestValue == Integer.MAX_VALUE ? -1 : bestValue;
     }
+    public int racecar(int target) {
+        Queue<int[]> queue = new LinkedList<>();
+        queue.add(new int[]{0, 1});
 
-    public String customSortString(String S, String T) {
-        Character []tArray = new Character[T.length()];
-        for (int i = 0; i < T.length(); i++)
-            tArray[i] = T.charAt(i);
-
-        Arrays.sort(tArray, new Comparator<Character>() {
-            @Override
-            public int compare(Character o1, Character o2) {
-                if (o1 == o2) return 0;
-
-                int in1 = S.indexOf(o1);
-                int in2 = S.indexOf(o2);
-
-                if (in1 == -1 && in2 == -1) {
-                    return o1 - o2;
-                }
-                else if (in1 == -1) {
-                    return -1;
-                }
-                else if(in2 == -1) {
-                    return 1;
-                }
-                else {
-                    return in1 - in2;
-                }
-            }
-        });
-
-        StringBuilder sb = new StringBuilder();
-        for (char c : tArray)
-            sb.append(c);
-
-        return sb.toString();
-    }
-
-    public int findCheapestPrice(int n, int[][] flights, int src, int dst, int K) {
-        if (src == dst) return 0;
-        int[][]dp = new int[n][K+1]; // to dst
-        int[][]table = new int[n][n];
-        for (int[]f : flights) {
-            table[f[0]][f[1]] = f[2];
-        }
-
-        for (int k = 0; k <= K; k++) {
-            for (int s = 0; s < n; s++) {
-                if (k == 0) {
-                    dp[s][k] = Integer.MAX_VALUE;
-                    dp[dst][k] = 0;
-                    continue;
-                }
-
-                if (s == dst) {
-                    dp[s][k] = 0;
-                }
-                else {
-                    dp[s][k] = table[s][dst] > 0 ? table[s][dst] : Integer.MAX_VALUE;
-                    dp[s][k] = Math.min(dp[s][k-1], dp[s][k]);
-
-                    for (int other = 0; other < n; other++) {
-                        if (other != s && other != dst && table[s][other] > 0 && dp[other][k-1] < Integer.MAX_VALUE) {
-                            dp[s][k] = Math.min(dp[s][k], table[s][other] + dp[other][k-1]);
-                        }
-                    }
-
-                }
-            }
-        }
-
-
-        return dp[src][K] < Integer.MAX_VALUE ? dp[src][K]  : -1;
-    }
-
-    public boolean canTransform(String start, String end) {
-        String neatStart = start.replaceAll("X", "");
-        String neatEnd = end.replaceAll("X", "");
-        if (!neatEnd.equals(neatStart)) {
-            return false;
-        }
-
-        if (neatStart.length() == 0) return true;
-
-        for (int i = 0; i < end.length(); i++) {
-            if (end.charAt(i) == 'L') break; // other part should handle it
-            if (end.charAt(i) == 'R'){
-                for (int j = 0; j < end.length(); j++) {
-                    if (start.charAt(j) == 'R') {
-                        return canTransform(start.substring(j + 1), end.substring(i + 1));
-                    }
-                    else if (start.charAt(j) == 'L') {
-                        return false;
-                    }
-                }
-            }
-        }
-
-        for (int i = end.length() - 1; i >= 0; i--) {
-            if (end.charAt(i) == 'R') break; // other part should handle it
-            if (end.charAt(i) == 'L'){
-                for (int j = end.length() - 1; j >= 0; j--) {
-                    if (start.charAt(j) == 'L') {
-                        return canTransform(start.substring(0, j), end.substring(0, i));
-                    }
-                    else if (start.charAt(j) == 'R') {
-                        return false;
-                    }
-                }
-            }
-        }
-
-        return false;
-    }
-
-    public TreeNode[] splitBST(TreeNode root, int V) {
-        TreeNode[]res = new TreeNode[2];
-        if (root == null) return res;
-        if (root.val < V) {
-            TreeNode rightNode = root.right;
-            TreeNode[] rightRes = splitBST(rightNode, V);
-            TreeNode smallerPart = null;
-
-            if (rightRes[0] != null && rightRes[0].val < V) {
-                smallerPart = rightRes[0];
-            }
-            else if (rightRes[1] != null && rightRes[1].val < V) {
-                smallerPart = rightRes[1];
-            }
-
-            root.right = smallerPart;
-            res[0] = root;
-            res[1] = rightRes[0] == smallerPart ? rightRes[1] : rightRes[0];
-
-            return res;
-        }
-        else if (root.val > V){
-            TreeNode leftNode = root.left;
-            TreeNode[] leftRes = splitBST(leftNode, V);
-            TreeNode largePart = null;
-
-            if (leftRes[0] != null && leftRes[0].val > V) {
-                largePart = leftRes[0];
-            }
-            else if (leftRes[1] != null && leftRes[1].val > V) {
-                largePart = leftRes[1];
-            }
-
-            root.left = largePart;
-            res[0] = root;
-            res[1] = leftRes[0] == largePart ? leftRes[1] : leftRes[0];
-
-            return res;
-        }
-        else {
-            res[0] = root;
-            res[1] = root.right;
-            root.right = null;
-            return res;
-        }
-    }
-
-    public boolean isIdealPermutation(int[] A) {
-        int len = A.length;
-        int[]rightMin = new int[len];
-        for (int i = len - 1; i >= 0; i--) {
-            if (i == len - 1) rightMin[i] = A[i];
-            else rightMin[i] = Math.min(A[i], rightMin[i + 1]);
-        }
-
-        for (int i = len - 3; i >= 0; i--) {
-            if (A[i] > rightMin[i + 2]) return false;
-        }
-
-        return true;
-    }
-
-    public int slidingPuzzle(int[][] board) {
-        Set<String> visit = new HashSet<>();
-        Queue<int[][]> queue = new LinkedList<>();
-        int[][] target = new int[][]{{1,2,3}, {4, 5, 0}};
-        String targetString = convert2String(target);
         int step = 0;
-        queue.add(board);
-        String sourceString = convert2String(board);
-        if (sourceString.equals(targetString)) return 0;
-
-        visit.add(sourceString);
-
-        int[]dxy = new int[]{-1, 0, 1, 0, -1};
-
+        Set<String> visit = new HashSet<>();
+        visit.add(0 +" "+ 1);
         while(!queue.isEmpty()) {
             step++;
             int qsize = queue.size();
             for (int q = 0; q < qsize; q++) {
-                int[][]cur = queue.remove();
+                int[] cur = queue.remove();
 
-                String aa = convert2String(cur);
+                // use A
+                int nextPos = cur[0] + cur[1];
 
-                int i = 0;
-                while(i < 6) {
-                    if (cur[i/3][i%3] == 0) break;
-                    else i++;
+                if (nextPos <= 2 * target && nextPos >= -2 * target) {
+                    if (nextPos == target) return step;
+                    int nextSpeed = cur[1] * 2;
+                    int[] nextState = new int[]{nextPos, nextSpeed};
+                    if (visit.add(enCode(nextState))) {
+                        queue.add(nextState);
+                    }
                 }
 
-                int x = i/3;
-                int y = i%3;
+                // use R
+                nextPos = cur[0];
+                if (nextPos <= 2 * target && nextPos >= -2 * target) {
+                    int nextSpeed = cur[1] > 0 ? -1 : 1;
+                    int []nextState = new int[]{nextPos, nextSpeed};
+                    if (visit.add(enCode(nextState))) {
+                        queue.add(nextState);
+                    }
+                }
+            }
+        }
+
+        return step;
+    }
+    private String enCode(int[]cur){
+        return cur[0] + " " + cur[1];
+    }
+    public double mincostToHireWorkers(int[] quality, int[] wage, int K) {
+        Integer[]index = new Integer[wage.length];
+
+        for (int i = 0; i < index.length; i++)
+            index[i] = i;
+
+        Arrays.sort(index, new Comparator<Integer>() {
+            @Override
+            public int compare(Integer o1, Integer o2) {
+                double ratio1 = wage[o1]*1.0/quality[o1];
+                double ratio2 = wage[o2]*1.0/quality[o2];
+                if (ratio1 < ratio2) return -1;
+                else return 1;
+            }
+        });
+
+        PriorityQueue<Integer> pq = new PriorityQueue<>(Collections.reverseOrder());
+        int curQualitySum = 0;
+        for (int i = 0; i < K; i++) {
+            curQualitySum += quality[index[i]];
+            pq.add(quality[index[i]]);
+        }
+
+        double curTotalWage = curQualitySum * wage[index[K-1]] * 1.0 / quality[index[K-1]];
+
+        for (int i = K; i < wage.length; i++) {
+            if (pq.peek() > quality[index[i]]) {
+                curQualitySum -= pq.remove();
+                curQualitySum += quality[index[i]];
+                pq.add(quality[index[i]]);
+
+                curTotalWage = Math.min(curTotalWage, curQualitySum * wage[index[i]] * 1.0 / quality[index[i]]);
+            }
+        }
+
+        return curTotalWage;
+    }
+    public int shortestPathAllKeys(String[] grid) {
+        int h = grid.length;
+        int w = grid[0].length();
+
+        int targetKeySet = 0;
+        int[]start = new int[]{0, 0};
+        char[][] g = new char[h][w];
+        for (int i = 0; i < w; i++) {
+            for (int j = 0; j < h; j++) {
+                g[j][i] = grid[j].charAt(i);
+                if (g[j][i] == '@') {
+                    start = new int[]{j, i};
+                }
+
+                if (g[j][i] >= 'a' && g[j][i] <= 'f') {
+                    int curLockValue = (1 << (g[j][i] - 'a'));
+                    targetKeySet  |= curLockValue;
+                }
+            }
+        }
+
+        int [][][]dp = new int[h][w][64];
+        Queue<int[]> queue = new LinkedList<>();
+        Set<Integer> visit = new HashSet<>();
+        queue.add(new int[]{start[0], start[1], 0});
+        visit.add(enCodeState(queue.peek()));
+
+        int step = 0;
+        int[]dxy = new int[]{-1, 0, 1, 0, -1};
+        while(!queue.isEmpty()) {
+            step++;
+            int qsize = queue.size();
+            for (int q = 0; q < qsize; q++) {
+                int[] curIndex = queue.remove();
                 for (int d = 0; d < 4; d++) {
-                    int newX = x + dxy[d];
-                    int newY = y + dxy[d+1];
-                    if (newX >= 0 && newX < 2 && newY >= 0 && newY < 3){
-                        int[][]newBoard = new int[2][3];
-                        for (int k1 = 0; k1 < 2; k1++)
-                            for (int k2 = 0; k2 < 3; k2++)
-                                newBoard[k1][k2] = cur[k1][k2];
+                    int newI = curIndex[0] + dxy[d];
+                    int newJ = curIndex[1] + dxy[d+1];
 
-                        swap(newBoard, newX, newY, x, y);
+                    if (newI >= 0 && newI < h && newJ >= 0 && newJ < w) {
+                        char c = g[newI][newJ];
 
-                        String nextBoard = convert2String(newBoard);
-                        if (nextBoard.equals(targetString)) return step;
+                        if (c == '#') {
+                            continue;
+                        }
+                        else if (c >= 'A' && c <= 'F') {
+                            if (canStepOn(c, curIndex[2]) && visit.add(enCodeState(new int[]{newI, newJ, curIndex[2]}))) {
+                                queue.add(new int[]{newI, newJ, curIndex[2]});
+                            }
+                        }
+                        else {
+                            int newState = updateLockState(curIndex[2], c);
+                            if (newState == targetKeySet) return step;
 
-                        if (visit.add(nextBoard)) {
-                            queue.add(newBoard);
+                            if (visit.add(enCodeState(new int[]{newI, newJ, newState}))) {
+                                queue.add(new int[]{newI, newJ, newState});
+                            }
                         }
                     }
                 }
@@ -471,340 +308,161 @@ class Solution {
 
         return -1;
     }
+    private int updateLockState(int lockState, char c) {
+        if (c >= 'a' && c <= 'f') {
+            int curLockValue = (1 << (c - 'a'));
 
-    private void swap(int[][] newBoard, int newX, int newY, int x, int y) {
-        int t = newBoard[newX][newY];
-        newBoard[newX][newY] = newBoard[x][y];
-        newBoard[x][y] = t;
-    }
-
-    private String convert2String(int[][] target) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 2; i++)
-            for (int j = 0; j < 3; j++)
-                sb.append(target[i][j]);
-
-        return sb.toString();
-    }
-
-    Map<TreeNode, Integer> noCover = new HashMap<>();
-    Map<TreeNode, Integer> needsCover = new HashMap<>();
-    public int minCameraCover(TreeNode root) {
-        return needsToCoverRoot(root);
-    }
-    private int needsToCoverRoot(TreeNode root){
-        if (root == null) return 0;
-        if (root.left == null && root.right == null) return 1;
-        if (needsCover.containsKey(root)) return needsCover.get(root);
-
-        int op1 = 1 + noCoverRoot(root.left) + noCoverRoot(root.right);
-        if (root.left != null) {
-            int op2 = 1 + noCoverRoot(root.left.left) + noCoverRoot(root.left.right) + needsToCoverRoot(root.right);
-            op1 = Math.min(op1, op2);
-        }
-
-        if (root.right != null) {
-            int op2 = 1 + noCoverRoot(root.right.left) + noCoverRoot(root.right.right) + needsToCoverRoot(root.left);
-            op1 = Math.min(op1, op2);
-        }
-
-        needsCover.put(root, op1);
-        return op1;
-    }
-
-    private int noCoverRoot(TreeNode root){
-        if (root == null) return 0;
-        if (root.left == null && root.right == null) return 0;
-        if (noCover.containsKey(root)) return noCover.get(root);
-
-        int op1 = needsToCoverRoot(root.left) + needsToCoverRoot(root.right);
-        int op2 = 1 + noCoverRoot(root.left) + noCoverRoot(root.right);
-
-        int res = Math.min(op1, op2);
-        noCover.put(root, res);
-        return res;
-    }
-
-    public String[] spellchecker(String[] wordlist, String[] queries) {
-        Set<String> originalList = new HashSet<>();
-        for (String w : wordlist)
-            originalList.add(w);
-
-        Map<String, String> caseMatches = new HashMap<>();
-        for (String w : wordlist) {
-            if (!caseMatches.containsKey(w.toLowerCase())) {
-                caseMatches.put(w.toLowerCase(), w);
-            }
-        }
-
-        Map<String, String> vowelMap = new HashMap<>();
-        for (String w : wordlist) {
-            String regexWord = convertWord(w.toLowerCase());
-            if (!vowelMap.containsKey(regexWord)) {
-                vowelMap.put(regexWord.toLowerCase(), w);
-            }
-        }
-
-        String []res = new String[queries.length];
-        for (int i = 0; i < queries.length; i++){
-            String curWord = queries[i];
-            if (originalList.contains(curWord)) res[i] = curWord;
-            else if (caseMatches.containsKey(curWord.toLowerCase())) {
-                res[i] = caseMatches.get(curWord.toLowerCase());
-            }
-            else {
-                String cw = convertWord(curWord.toLowerCase());
-                if (vowelMap.containsKey(cw)) {
-                    res[i] = vowelMap.get(cw);
-                }
-                else {
-                    res[i] = "";
-                }
-            }
-        }
-
-        return res;
-    }
-
-    private String convertWord(String w) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < w.length(); i++) {
-            char c = w.charAt(i);
-            if (c == 'a' || c == 'e' || c== 'i' || c == 'o' || c == 'u') {
-                sb.append("*");
-            }
-            else {
-                sb.append(c);
-            }
-        }
-
-        return sb.toString();
-    }
-
-    public int[] numsSameConsecDiff(int N, int K) {
-        if (N == 1) {
-            return new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+            return (lockState | curLockValue);
         }
         else {
-            int[]lastResult = numsSameConsecDiff(N - 1, K);
-            List<Integer> res = new LinkedList<>();
-            for (int v : lastResult) {
-                Integer nextValue = findNextValue(v, K);
-                if (nextValue != null) {
-                    res.add(nextValue);
-                }
-
-                if (K != 0) {
-                    Integer prevValue = findPrevValue(v, K);
-                    if (prevValue != null && prevValue != nextValue)
-                        res.add(prevValue);
-
-                }
-            }
-
-            int []r = new int[res.size()];
-            int i = 0;
-            for (int x : res)
-                r[i++] = x;
-
-            return r;
+            return lockState;
         }
     }
+    private boolean canStepOn(char c, int lockState) {
+        int needValue = (1 << (c - 'A'));
 
-    private Integer findPrevValue(int v, int K) {
-        if (v == 0) return null;
-        int lastDigit = v%10;
-        if (lastDigit - K >= 0 ) {
-            return v * 10 + (lastDigit - K);
-        }
-
-        return null;
+        return (lockState & needValue) != 0;
     }
-
-    private Integer findNextValue(int v, int K) {
-        if (v == 0) return null;
-        int lastDigit = v%10;
-        if (lastDigit + K < 10 ) {
-            return v * 10 + (lastDigit + K);
-        }
-
-        return null;
+    private int enCodeState(int[]state){
+        return 900 * state[2] + 30 * state[1] + state[0];
     }
+    public int numBusesToDestination(int[][] routes, int S, int T) {
+        Map<Integer, List<Integer>> stopToBus = new HashMap<>();
+        for (int i = 0; i < routes.length; i++) {
+            for (int j = 0; j < routes[i].length; j++) {
+                if (!stopToBus.containsKey(routes[i][j])) stopToBus.put(routes[i][j], new ArrayList<>());
 
-    public boolean isUnivalTree(TreeNode root) {
-        if (root == null) return true;
-        if (root.left != null && root.left.val != root.val) return false;
-        if (root.right != null && root.right.val != root.val) return false;
-        return isUnivalTree(root.left) && isUnivalTree(root.right);
-    }
-
-    public int maxChunksToSorted(int[] arr) {
-        int[]arr2 = new int[arr.length];
-        for (int i = 0; i < arr.length; i++)
-            arr2[i] = arr[i];
-
-        Arrays.sort(arr2);
-
-        Map<Integer, Integer> map = new HashMap<>();
-        int count = 0;
-
-        for (int i = 0; i < arr2.length; i++) {
-            map.put(arr2[i], map.getOrDefault(arr2[i], 0) + 1);
-            map.put(arr[i], map.getOrDefault(arr[i], 0) - 1);
-
-            if (map.get(arr[i]) == 0) map.remove(arr[i]);
-            if (map.containsKey(arr2[i]) && map.get(arr2[i]) == 0) map.remove(arr2[i]);
-
-            if (map.size() == 0) {
-                count++;
-                map.clear();
+                stopToBus.get(routes[i][j]).add(i);
             }
         }
 
-        return count;
-    }
-
-    public double minmaxGasDist(int[] stations, int K) {
-        double lo = 0;
-        Arrays.sort(stations);
-        double hi = stations[stations.length - 1];
-        double eps = 0.000001;
-        while(hi - lo > eps) {
-            double mid = (lo + hi)/2;
-            if (canFill(stations, K, mid)) {
-                hi = mid;
-            }
-            else {
-                lo = mid;
-            }
-        }
-
-        return lo;
-    }
-
-    private boolean canFill(int[] stations, int k, double mid) {
-        for (int i = 1; i < stations.length; i++) {
-            double diff = stations[i] - stations[i - 1];
-            int wanted = (int)(diff/mid);
-            k -= wanted;
-            if (k < 0) return false;
-        }
-
-        return true;
-    }
-
-    public String reorganizeString(String S) {
-        int[]count = new int[26];
-        int[]validPos = new int[26];
-        for (char c : S.toCharArray()) {
-            count[c-'a']++;
-        }
-
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < S.length(); i++) {
-            int candidate = findCandidate(count, validPos, i);
-            if (candidate == -1) return "";
-            sb.append((char)('a' + candidate));
-        }
-
-        return sb.toString();
-    }
-
-    private int findCandidate(int[] count, int[] validPos, int curIndex) {
-        int maxIndex = -1;
-        for (int i = 0; i < count.length; i++) {
-            if (validPos[i] >= curIndex) {
-                if (maxIndex == -1 || count[maxIndex] < count[i]) {
-                    maxIndex = i;
+        boolean[][]table = new boolean[routes.length][routes.length];
+        for (int stop : stopToBus.keySet()) {
+            List<Integer> connection = stopToBus.get(stop);
+            for (int i = 0; i < connection.size(); i++) {
+                for (int j = 0; j < connection.size(); j++) {
+                    if (i != j) {
+                        table[connection.get(i)][connection.get(j)] = true;
+                    }
                 }
             }
         }
 
-        return maxIndex;
-    }
-
-    public int minSwapsCouples(int[] row) {
-        Map<Integer, Integer> map = new HashMap<>(); // group to index
-        DJSet djSet = new DJSet(row.length);
-
-        for (int i = 0; i < row.length; i++) {
-            if (map.containsKey(row[i]/2)) {
-                djSet.union(map.get(row[i]/2), i);
-            }
-            else {
-                map.put(row[i]/2, i);
-            }
-
-            // connect even odd
-            if (i%2 == 1) {
-                djSet.union(i-1, i);
-            }
+        Set<Integer> visit = new HashSet<>();
+        Queue<Integer> queue = new LinkedList<>();
+        for (int bus : stopToBus.get(S)) {
+            visit.add(bus);
+            queue.add(bus);
         }
 
-        Map<Integer, Integer> compSize = new HashMap<>();
-        for (int i = 0; i < djSet.root.length; i++) {
-            int curRoot = djSet.findRoot(i);
-            compSize.put(curRoot, compSize.getOrDefault(curRoot, 0) + 1);
+        Set<Integer> targetSet = new HashSet<>();
+        for (int bus : stopToBus.get(T)) {
+            targetSet.add(bus);
         }
 
-        int swapCount = 0;
-        for (int key : compSize.keySet()) {
-            swapCount+= (compSize.get(key)/2 - 1);
-        }
+        int steps = 0;
+        while(!queue.isEmpty()) {
+            int qsize = queue.size();
+            steps++;
+            for (int q = 0; q < qsize; q++) {
+                int curBus = queue.remove();
+                if (targetSet.contains(curBus)) {
+                    return steps;
+                }
 
-        return swapCount;
-    }
-
-
-
-    public int numMatchingSubseq(String S, String[] words) {
-        int[][] index = new int[S.length()][26]; // at index i, what is the next char j
-
-        int[] next = new int[26];
-        Arrays.fill(next, -1);
-        for (int i = 0; i < 26; i++)
-            next[i] = findNext(S, 0, i, next);
-
-        for (int i = 0; i < S.length(); i++) {
-            for (int j = 0; j < 26; j++) {
-                next[j] = findNext(S, i, j, next);
-                //if (next[j] == 100)
-                //System.out.println(next[j]);
-                index[i][j] = next[j];
-            }
-        }
-
-        int count = 0;
-        for (String w : words) {
-            if (isSubstr(index, w)) count++;
-        }
-
-        return count;
-    }
-
-    private boolean isSubstr(int[][] index, String words) {
-        int curIndex = 0;
-        for (int i = 0; i < words.length(); i++) {
-            if (curIndex >= index.length) return false;
-
-            curIndex = index[curIndex][words.charAt(i) - 'a'];
-            if (curIndex == -1) return false;
-            else curIndex++;
-        }
-
-        return true;
-    }
-
-    private int findNext(String S, int startIndex, int targetChar, int[] next) {
-        if (next[targetChar] >= startIndex) return next[targetChar];
-
-        for (int i = startIndex; i < S.length(); i++) {
-            if (S.charAt(i) - 'a' == targetChar) {
-                return i;
+                for (int nextBus = 0; nextBus < table.length; nextBus++) {
+                    if (table[curBus][nextBus]) {
+                        if (visit.add(nextBus)) {
+                            queue.add(nextBus);
+                        }
+                    }
+                }
             }
         }
 
         return -1;
+    }
+    public int minSwap(int[] A, int[] B) {
+        int SWAP = 0;
+        int NO_SWAP = 1;
+
+        int[][]dp = new int[A.length][2];
+
+        dp[0][SWAP] = 1;
+        dp[0][NO_SWAP] = 0;
+
+        int max = A.length;
+
+        for (int i = 1; i < A.length; i++) {
+            dp[i][SWAP] = max;
+            dp[i][NO_SWAP] = max;
+
+            if (A[i] > A[i-1] && B[i] > B[i-1]) {
+                dp[i][SWAP] = Math.min(dp[i][SWAP], 1 + dp[i-1][SWAP]);
+                dp[i][NO_SWAP] = Math.min(dp[i][NO_SWAP], dp[i-1][NO_SWAP]);
+            }
+
+            if (A[i] > B[i-1] && B[i] > A[i-1]) {
+                dp[i][SWAP] = Math.min(dp[i][SWAP], 1 + dp[i-1][NO_SWAP]);
+                dp[i][NO_SWAP] = Math.min(dp[i][NO_SWAP], dp[i-1][SWAP]);
+            }
+        }
+
+        return Math.min(dp[A.length - 1][SWAP], dp[A.length - 1][NO_SWAP]);
+    }
+    public int[] kthSmallestPrimeFraction(int[] A, int K) {
+        PriorityQueue<int[]> pq = new PriorityQueue<int[]>(new Comparator<int[]>() {
+            @Override
+            public int compare(int[] o1, int[] o2) {
+                double n1 = A[o1[0]]*1.0/A[o1[1]];
+                double n2 = A[o2[0]]*1.0/A[o2[1]];
+                if (n1 > n2) return 1;
+                else if (n1 < n2) return -1;
+                return 0;
+            }
+        });
+
+        for (int i = A.length - 1; i >= 1; i--) {
+            pq.add(new int[]{i - 1, i});
+        }
+
+        for (int i = 1; i < K; i++){
+            int[] current = pq.remove();
+            current[0]--;
+            if (current[0] > 0) {
+                pq.add(current);
+            }
+        }
+
+        return pq.peek();
+    }
+    public int kthGrammar(int N, int K) {
+        if (N == 1) return 0;
+        else if (N == 2) {
+            if (K == 1) return 0;
+            else return 1;
+        }
+        else {
+            int bit = kthGrammar(N - 1, (K+1)/2);
+            if (bit == 1) {
+                // next bit will be 10
+                if (K % 2 == 0) {
+                    return 1;
+                }
+                else {
+                    return 0;
+                }
+            }
+            else {
+                // next bit will be 01
+                if (K % 2 == 1) {
+                    return 0;
+                }
+                else {
+                    return 1;
+                }
+            }
+        }
     }
 }
 
