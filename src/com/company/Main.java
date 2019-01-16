@@ -1,347 +1,111 @@
 package com.company;
 
-import javax.print.attribute.IntegerSyntax;
-import javax.print.attribute.standard.MediaSizeName;
 import java.util.*;
-import java.util.function.BinaryOperator;
-
-import static java.util.Collections.swap;
-import static javax.print.attribute.standard.MediaSizeName.A;
 
 public class Main {
     public static void main(String[] args) {
-        List<Integer> x = new Solution().splitIntoFibonacci("1101111");
+        int x = new Solution().kSimilarity("cdebcdeadedaaaebfbcf", "baaddacfedebefdabecc");
         System.out.println(x);
     }
 }
 
 class Solution {
+    public int kSimilarity(String A, String B) {
+        Queue<String> queue = new LinkedList<>();
+        int step = 0;
+        if (A.equals(B)) return 0;
 
+        Set<String> visit = new HashSet<>();
+        visit.add(A);
+        queue.add(A);
 
-    List<Integer> res = new ArrayList<>();
-    public List<Integer> splitIntoFibonacci(String S) {
-        List<Integer> cur = new ArrayList<>();
-        helper(S, 0, cur);
-        if (res.size() >= 3) return res;
-
-        return new ArrayList<>();
-    }
-    private void helper(String S, int start, List<Integer> cur) {
-        if (start == S.length()) {
-            if (cur.size() >= 3)
-                this.res = new ArrayList<>(cur);
-        }
-        else if (S.charAt(start) == '0') {
-            int number = 0;
-            if (cur.size() <= 1) {
-                cur.add(number);
-                helper(S, start + 1, cur);
-                cur.remove(cur.size() - 1);
-            }
-            else {
-                int last = cur.get(cur.size() - 1);
-                int last1 = cur.get(cur.size() - 2);
-                if (last == 0 - last1) {
-                    cur.add(0);
-                    helper(S, start + 1, cur);
-                    cur.remove(cur.size() - 1);
-                }
-                else {
-                    return;
-                }
-            }
-        }
-        else {
-            for (int i = start; i < S.length(); i++) {
-                String curParseNumber = S.substring(start, i + 1);
-                long numberLong = Long.parseLong(curParseNumber);
-                if (numberLong <= Integer.MAX_VALUE) {
-                    int number = (int)numberLong;
-                    if (cur.size() <= 1) {
-                        cur.add(number);
-                        helper(S, i + 1, cur);
-                        cur.remove(cur.size() - 1);
-                    }
-                    else {
-                        int last = cur.get(cur.size() - 1);
-                        int last1 = cur.get(cur.size() - 2);
-                        if (last == number - last1) {
-                            cur.add(number);
-                            helper(S, i + 1, cur);
-                            cur.remove(cur.size() - 1);
+        while(!queue.isEmpty()) {
+            step++;
+            int qsize = queue.size();
+            for (int q = 0; q < qsize; q++) {
+                String cur = queue.remove();
+                List<String> nb = findNb(cur, B);
+                for (String next : nb) {
+                    if (visit.add(next)) {
+                        queue.add(next);
+                        if (next.equals(B)) {
+                            return step;
                         }
                     }
                 }
             }
         }
+
+        return 0;
     }
-    public int maxProfitAssignment(int[] difficulty, int[] profit, int[] worker) {
-        Work[]works = new Work[profit.length];
-        for (int i = 0; i < works.length; i++) {
-            works[i] = new Work(difficulty[i], profit[i]);
-        }
 
-        Arrays.sort(works, new Comparator<Work>() {
-            @Override
-            public int compare(Work o1, Work o2) {
-                if (o1.d != o2.d) {
-                    return o1.d - o1.d;
-                }
-                else {
-                    return o1.p - o2.p;
-                }
-            }
-        });
+    private List<String> findNb(String cur, String target) {
+        List<String> nb = new ArrayList<>();
+        for (int i = 0; i < cur.length(); i++){
+            if (cur.charAt(i) != target.charAt(i)) {
+                for (int j = 0; j < target.length(); j++) {
+                    if (target.charAt(j) == cur.charAt(i) && target.charAt(i) == cur.charAt(j)) {
+                        nb.clear();
+                        nb.add(swap(cur, i, j));
 
-        Arrays.sort(works);
-        int res = 0;
-        int index = 0;
-        PriorityQueue<Integer> pq = new PriorityQueue<>(Collections.reverseOrder());
-        for (int i = 0; i < worker.length; i++) {
-            while(index < works.length && worker[i] >= works[index].d) {
-                pq.add(works[index].p);
-                index++;
-            }
-
-            if (!pq.isEmpty()) {
-                res += pq.peek();
-            }
-        }
-
-        return res;
-    }
-    class Work {
-        int d;
-        int p;
-        public Work(int d, int p){
-            this.d = d;
-            this.p = p;
-        }
-    }
-    public String pushDominoes(String dominoes) {
-        int len = dominoes.length();
-        int[][]faillingTime = new int[len][2];
-        int index = -1;
-        for (int i = 0; i < len; i++) {
-            char c = dominoes.charAt(i);
-            if (c == 'R') {
-                index = i;
-                faillingTime[i][0] = 0;
-            }
-            else if (c == '.') {
-                if (index != -1) {
-                    faillingTime[i][0] = (i - index);
-                }
-                else {
-                    faillingTime[i][0] = Integer.MAX_VALUE;
+                        return nb;
+                    }
                 }
             }
-            else { // c == 'L'
-                faillingTime[i][0] = Integer.MAX_VALUE;
-                index = -1;
-            }
         }
 
-        index = -1;
-        for (int i = len - 1; i >= 0; i--) {
-            char c = dominoes.charAt(i);
-            if (c == 'L') {
-                index = i;
-                faillingTime[i][1] = 0;
-            }
-            else if (c == '.') {
-                if (index != -1) {
-                    faillingTime[i][1] = (index - i);
-                }
-                else {
-                    faillingTime[i][1] = Integer.MAX_VALUE;
+        for (int i = 0; i < cur.length(); i++){
+            if (cur.charAt(i) != target.charAt(i)) {
+                boolean[]used = new boolean[6];
+
+                for (int j = 0; j < target.length(); j++) {
+                    if (cur.charAt(j) != target.charAt(j) && cur.charAt(i) != target.charAt(j) && !used[cur.charAt(j) - 'a']) {
+                        used[cur.charAt(j) - 'a'] = true;
+                        nb.add(swap(cur, i, j));
+                    }
                 }
             }
-            else { // c == 'R'
-                faillingTime[i][1] = Integer.MAX_VALUE;
-                index = -1;
-            }
         }
 
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < len; i++) {
-            if (faillingTime[i][0] == faillingTime[i][1]) {
-                sb.append(".");
-            }
-            else if (faillingTime[i][0] < faillingTime[i][1]) {
-                sb.append("R");
-            }
-            else {
-                sb.append("L");
-            }
-        }
-
-        return sb.toString();
+        return nb;
     }
-    public int carFleet(int target, int[] position, int[] speed) {
-        Node[]nodes = new Node[speed.length];
-        for (int i = 0; i < speed.length; i++) {
-            nodes[i] = new Node(position[i], position[i]/speed[i]);
-        }
 
-        Arrays.sort(nodes, (x,y) -> y.p - x.p);
-
-        int count = 0;
-        int lastHitTime = 0;
-        for (int i = 0; i < nodes.length; i++) {
-            int time = nodes[i].t;
-            if (time <= lastHitTime) {
-                continue;
-            }
-            else {
-                count++;
-                lastHitTime = time;
-            }
-        }
-
-        return count;
+    private String swap(String s, int i, int j) {
+        char[]array = s.toCharArray();
+        char c = array[i];
+        array[i] = array[j];
+        array[j] = c;
+        return new String(array);
     }
-    class Node{
-        int p;
-        int t;
-        public Node(int p, int t){
-            this.p = p;
-            this.t = t;
-        }
-    }
-    public int oddEvenJumps(int[] A) {
-        int alen = A.length;
 
-        TreeSet<Integer> tree = new TreeSet<>(new Comparator<Integer>() {
-            @Override
-            public int compare(Integer o1, Integer o2) {
-                if (A[o1] != A[o2])
-                    return A[o1] - A[o2];
-
-                return o1 - o2;
-            }
-        });
-
-        TreeSet<Integer> lowerTree = new TreeSet<>(new Comparator<Integer>() {
-            @Override
-            public int compare(Integer o1, Integer o2) {
-                if (A[o1] != A[o2])
-                    return A[o1] - A[o2];
-
-                return - o1 + o2;
-            }
-        });
-
-        DJSet djSet = new DJSet(alen * 2);
-        int res = 1;
-        tree.add(alen - 1);
-        lowerTree.add(alen - 1);
-        int v1 = (alen - 1) * 2;
-        int v2 = v1 + 1;
-
-        for (int i = alen - 2; i >= 0; i--) {
-
-            Integer higher = tree.higher(i);
-            int oddJump = 2 * i + 0;
-            if (higher != null) {
-                djSet.union(oddJump, higher * 2 + 1);
-            }
-
-            Integer lower = lowerTree.lower(i);
-            int evenJump = 2 * i + 1;
-            if (lower != null) {
-                djSet.union(evenJump, lower * 2 + 0);
-            }
-
-            if (djSet.isConnected(oddJump, v1)
-                    || djSet.isConnected(oddJump,v2)) {
-                res++;
-            }
-
-            tree.add(i);
-            lowerTree.add(i);
+    public int numSimilarGroups(String[] A) {
+        Set<String> set = new HashSet<>();
+        for (String a : A) set.add(a);
+        A = new String[set.size()];
+        int ii = 0;
+        for (String ss : set) {
+            A[ii++] = ss;
         }
 
-        return res;
-    }
-    public int subarraysDivByK(int[] A, int K) {
-        int []dp = new int[K];
-        int cur = 0;
+        DJSet djSet = new DJSet(A.length);
         for (int i = 0; i < A.length; i++) {
-            cur += A[i];
-            int mod = (cur % K + K)%K;
-            dp[mod]++;
-        }
-
-        int sum = 0;
-        for (int i = 0; i < K; i++) {
-            if (dp[i] > 1) {
-                sum += (dp[i] * (dp[i] - 1))/2;
+            for (int j = i + 1; j < A.length; j++) {
+                if (isNearBy(A[i], A[j])) {
+                    djSet.union(i, j);
+                }
             }
         }
 
-        sum += dp[0];
-
-        return sum;
+        return djSet.count().size();
     }
-    public int largestPerimeter(int[] A) {
-        Arrays.sort(A);
-
-        int best = 0;
-        for (int i = A.length - 3; i >= 0; i--) {
-            if (A[i] + A[i+1] > A[i+2]) {
-                best = Math.max(best, A[i] + A[i+1] + A[i+2]);
-            }
+    private boolean isNearBy(String s, String t) {
+        int diffCount = 0;
+        for (int i = 0; i < s.length(); i++) {
+            if (s.charAt(i) != t.charAt(i))
+                diffCount++;
         }
 
-        return best;
-    }
-    public int[][] kClosest(int[][] points, int K) {
-        PriorityQueue<int[]> pq = new PriorityQueue<int[]>(new Comparator<int[]>() {
-            @Override
-            public int compare(int[] o1, int[] o2) {
-                return - o1[0] * o1[0] - o1[1] * o1[1] + o2[0] * o2[0] + o2[1] * o2[1];
-            }
-        });
-
-        for (int [] p : points) {
-            if (pq.size() < K) {
-                pq.add(p);
-            }
-            else {
-                pq.add(p);
-                pq.remove();
-            }
-        }
-
-        int[][]res = new int[K][2];
-        for (int i = 0; i < K; i++) {
-            res[i] = pq.remove();
-        }
-
-        return res;
-    }
-    public boolean lemonadeChange(int[] bills) {
-        int numberOfBill[] = new int[2]; // number of 5 and 10
-        for (int b : bills) {
-            if (b == 20) {
-                numberOfBill[1]--;
-                numberOfBill[0]--;
-                if (numberOfBill[1] < 0 || numberOfBill[1] < 0)
-                    return false;
-            }
-            else if (b == 10) {
-                numberOfBill[1]++;
-                numberOfBill[0]--;
-                if (numberOfBill[0] < 0)
-                    return false;
-            }
-            else {
-                numberOfBill[0]++;
-            }
-        }
-
-        return true;
+        return diffCount == 2;
     }
 }
 
