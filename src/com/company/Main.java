@@ -4,111 +4,102 @@ import java.util.*;
 
 public class Main {
     public static void main(String[] args) {
-        int x = new Solution().kSimilarity("cdebcdeadedaaaebfbcf", "baaddacfedebefdabecc");
+        int x = new Solution().numFactoredBinaryTrees(new int[]{2, 4, 5, 10});
         System.out.println(x);
     }
 }
 
 class Solution {
-    public int kSimilarity(String A, String B) {
-        Queue<String> queue = new LinkedList<>();
-        int step = 0;
-        if (A.equals(B)) return 0;
+    int mod = 1_000_000_007;
+    public int numFactoredBinaryTrees(int[] A) {
+        Arrays.sort(A);
+        int []dp = new int[A.length];
+        Arrays.fill(dp, 1);
 
-        Set<String> visit = new HashSet<>();
-        visit.add(A);
-        queue.add(A);
+        int sum = 1;
+        Map<Integer, Integer> map = new HashMap<>();
+        for (int i = 0; i < A.length; i++)
+            map.put(A[i], i);
 
-        while(!queue.isEmpty()) {
-            step++;
-            int qsize = queue.size();
-            for (int q = 0; q < qsize; q++) {
-                String cur = queue.remove();
-                List<String> nb = findNb(cur, B);
-                for (String next : nb) {
-                    if (visit.add(next)) {
-                        queue.add(next);
-                        if (next.equals(B)) {
-                            return step;
-                        }
+        for (int i = 1; i < A.length; i++) {
+            for (int j = i - 1; j >= 0; j--) {
+                if (A[i] % A[j] == 0) {
+                    int otherValue = A[i]/A[j];
+                    if (map.containsKey(otherValue)) {
+                        int thirdIndex = map.get(otherValue);
+
+                            dp[i] += dp[j] * dp[thirdIndex] % mod;
+
                     }
                 }
             }
+
+            sum += dp[i];
+            sum %= mod;
         }
 
-        return 0;
+        return sum % mod;
     }
-
-    private List<String> findNb(String cur, String target) {
-        List<String> nb = new ArrayList<>();
-        for (int i = 0; i < cur.length(); i++){
-            if (cur.charAt(i) != target.charAt(i)) {
-                for (int j = 0; j < target.length(); j++) {
-                    if (target.charAt(j) == cur.charAt(i) && target.charAt(i) == cur.charAt(j)) {
-                        nb.clear();
-                        nb.add(swap(cur, i, j));
-
-                        return nb;
-                    }
-                }
-            }
-        }
-
-        for (int i = 0; i < cur.length(); i++){
-            if (cur.charAt(i) != target.charAt(i)) {
-                boolean[]used = new boolean[6];
-
-                for (int j = 0; j < target.length(); j++) {
-                    if (cur.charAt(j) != target.charAt(j) && cur.charAt(i) != target.charAt(j) && !used[cur.charAt(j) - 'a']) {
-                        used[cur.charAt(j) - 'a'] = true;
-                        nb.add(swap(cur, i, j));
-                    }
-                }
-            }
-        }
-
-        return nb;
-    }
-
-    private String swap(String s, int i, int j) {
-        char[]array = s.toCharArray();
-        char c = array[i];
-        array[i] = array[j];
-        array[j] = c;
-        return new String(array);
-    }
-
-    public int numSimilarGroups(String[] A) {
-        Set<String> set = new HashSet<>();
-        for (String a : A) set.add(a);
-        A = new String[set.size()];
-        int ii = 0;
-        for (String ss : set) {
-            A[ii++] = ss;
-        }
-
-        DJSet djSet = new DJSet(A.length);
+    public int bestRotation(int[] A) {
+        List<int[]> intervals = new ArrayList();
         for (int i = 0; i < A.length; i++) {
-            for (int j = i + 1; j < A.length; j++) {
-                if (isNearBy(A[i], A[j])) {
-                    djSet.union(i, j);
+
+            int a = A[i];
+            if (a == A.length) continue;
+
+            if (i >= a) {
+                intervals.add(new int[]{0, i - a});
+            }
+
+            if (a < A.length) {
+                if (i + A.length - a < A.length)
+                    intervals.add(new int[]{i + 1, i + A.length - a});
+                else {
+                    intervals.add(new int[]{i + 1, A.length});
                 }
             }
         }
 
-        return djSet.count().size();
-    }
-    private boolean isNearBy(String s, String t) {
-        int diffCount = 0;
-        for (int i = 0; i < s.length(); i++) {
-            if (s.charAt(i) != t.charAt(i))
-                diffCount++;
+        List<int[]> nodes = new ArrayList<>();
+        for (int[] interval : intervals) {
+            nodes.add(new int[]{interval[0], -1});
+            nodes.add(new int[]{interval[0], 1});
         }
 
-        return diffCount == 2;
+        Collections.sort(nodes, new Comparator<int[]>() {
+            @Override
+            public int compare(int[] o1, int[] o2) {
+                if (o1[0] != o2[0]) return o1[0] - o2[0];
+                return o1[1] - o2[1];
+            }
+        });
+
+        int count = 0;
+        int best = 0;
+        int bestMove = 0;
+        for (int[] node : nodes) {
+            if (node[1] == -1) {
+                count++;
+                if (count > best) {
+                    bestMove = node[0];
+                    best = count;
+                }
+            } else {
+                count--;
+            }
+        }
+
+        return bestMove;
     }
 }
 
+class Node{
+        int x;
+        boolean isStart;
+        public Node(int x, boolean isStart){
+            this.x = x; this.isStart = isStart;
+        }
+}
 class Interval {
     int start;
     int end;
