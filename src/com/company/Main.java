@@ -4,300 +4,345 @@ import java.util.*;
 
 public class Main {
     public static void main(String[] args) {
-       // int x = new Solution().numFactoredBinaryTrees(new int[]{2, 4, 5, 10});
+        //var x = new Solution().expressiveWords("heeellooo", new String[]{"hello", "hi", "helo"});
         //System.out.println(x);
-        TreeNode root = new TreeNode(0);
-        root.left = new TreeNode(3);
-        root.right = new TreeNode(0);
-
-        String x = new Solution().findReplaceString("abcd", new int[]{0,2}, new String[]{"a", "cd"}, new String[]{"eee", "ffff"});
+        Solution test = new Solution();
+        var x = test.evaluate("(mult 3 (add 2 3))");
         System.out.println(x);
     }
 }
 
 class Solution {
     int mod = 1_000_000_007;
-    public String findReplaceString(String S, int[] indexes, String[] sources, String[] targets) {
-        Map<Integer, String> mapToReplace = new HashMap<>();
-        Map<Integer, String> mapToSource = new HashMap<>();
 
-        for (int i = 0; i < indexes.length; i++) {
-            int startIndex = indexes[i];
-            String sourceString = sources[i];
-            mapToSource.put(startIndex, sourceString);
+    public int flipgame(int[] fronts, int[] backs) {
+        Set<Integer> samePage = new HashSet<>();
+        for (int i = 0; i < fronts.length; i++) {
+            if (fronts[i] == backs[i]) samePage.add(fronts[i]);
+        }
 
-            int ending = Math.min(startIndex + sourceString.length(), S.length());
-            if (sourceString.equals(S.substring(startIndex, ending))) {
-                mapToReplace.put(startIndex, targets[i]);
+        Arrays.sort(fronts);
+        Arrays.sort(backs);
+        int min = Integer.MAX_VALUE;
+        for (int f : fronts) {
+            if (!samePage.contains(f)) {
+                min = f;
+                break;
             }
         }
 
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < S.length(); i++) {
-            if (mapToReplace.containsKey(i)) {
-                sb.append(mapToReplace.get(i));
-                i += mapToSource.get(i).length() - 1;
-            }
-            else {
-                sb.append(S.charAt(i));
+        for (int b : backs) {
+            if (!samePage.contains(b)) {
+                min = Math.min(min, b);
+                break;
             }
         }
 
-        return sb.toString();
+        return min == Integer.MAX_VALUE ? 0 : min;
     }
 
-    public int consecutiveNumbersSum(int N) {
-        int res = 1;
-        for (int n = 1 ;; n++) {
-            int mx = N - n * (n - 1)/2;
-            if (mx <= 0) break;
+    public int snakesAndLadders(int[][] board) {
+        int N = board.length;
+        Queue<Integer> queue = new LinkedList<>();
+        queue.add(1);
+        Set<Integer> visit = new HashSet<>();
+        visit.add(1);
+        int step = 0;
+        while(!queue.isEmpty()) {
+            int qsize = queue.size();
+            step++;
+            for (int q = 0; q < qsize; q++) {
+                int cur = queue.remove();
+                for (int k = 1; k <= 6; k++) {
+                    int next = cur + k;
+                    if (next == N * N) return step;
 
-            if (mx % n == 0) res++;
+                    int[]index = findIndex(next, N);
+                    if (board[index[0]][index[1]] != -1) {
+                        next = board[index[0]][index[1]];
+
+                    }
+
+                    if (visit.add(next)) {
+                        queue.add(next);
+                    }
+                }
+            }
         }
 
-        return res;
+        return step;
     }
 
-    private boolean isPerfectSqure(long num){
-        long x = (long)Math.sqrt(num);
-        if(Math.pow(x,2) == num)
-            return true;
-
-        return false;
+    private int[] findIndex(int next, int N) {
+        int index = next - 1;
+        int fromBotton = index / N;
+        int fromLeft = index % N;
+        boolean isFromLeft = fromBotton % 2 == 0;
+        if (!isFromLeft) {
+            fromLeft = N - 1 - fromLeft;
+        }
+        return new int[]{N - 1 - fromBotton, fromLeft};
     }
 
-    Map<String, Integer> cache = new HashMap<>();
-    public int uniquePathsIII(int[][] grid) {
+    public int maxIncreaseKeepingSkyline(int[][] grid) {
         int h = grid.length;
         int w = grid[0].length;
-        int start = 0;
-        int end = 0;
-        int count = 0;
+
+        int hMax[] = new int[h];
+        int wMax[] = new int[w];
         for (int i = 0; i < h; i++) {
             for (int j = 0; j < w; j++) {
-                if (grid[i][j] == 1) {
-                    start = i * w + j;
-                }
-                else if (grid[i][j] == 2) {
-                    end = i * w + j;
-                }
-                else if (grid[i][j] == 0){
-                    count++;
-                }
+                hMax[i] = Math.max(hMax[i], grid[i][j]);
+                wMax[j] = Math.max(wMax[j], grid[i][j]);
             }
         }
 
-        int res = dfs(start, end, grid, count);
+        int res = 0;
+        for (int i = 0; i < h; i++) {
+            for (int j = 0; j < w; j++) {
+                int min = Math.min(hMax[i], wMax[j]);
+                res += Math.max(0, min - grid[i][j]);
+            }
+        }
+
         return res;
     }
-    int []dxy = new int[]{-1, 0, 1, 0, -1};
-    private int dfs(int curPos, int end, int[][] grid, int count) {
-        if (curPos == end) {
-            if (count == 0)
-                return 1;
-            else
-                return 0;
+    Map<Integer, Integer> parPair = new HashMap<>();
+    String let = "let";
+    String add = "add";
+    String mult = "mult";
+
+    public int evaluate(String expression) {
+        Map<String, Integer> localValue = new HashMap<>();
+        Stack<Integer> stack = new Stack<>();
+        for (int i = 0; i < expression.length(); i++) {
+            if (expression.charAt(i) == '(') {
+                stack.push(i);
+            }
+            else if (expression.charAt(i) == ')'){
+                parPair.put(stack.pop(), i);
+            }
+        }
+
+        return evaluate(expression, 0, expression.length()-1, localValue);
+    }
+    public int evaluate(String exp, int start, int end, Map<String, Integer> localValue){
+        if (exp.charAt(start) == ' ') {
+            return evaluate(exp, start + 1, end, localValue);
+        }
+        else if (exp.charAt(end) == ' ') {
+            return evaluate(exp, start, end - 1, localValue);
+        }
+        else if (exp.charAt(start) == '(') {
+            return evaluate(exp, start + 1, end - 1, localValue);
+        }
+        else if (exp.startsWith(add, start)) {
+            int nextIndex = start + 4;
+            int breakIndex = findBreakOfParallelExp(exp, nextIndex, end);
+            int leftValue = evaluate(exp, nextIndex, breakIndex - 1, localValue);
+            int rightValue = evaluate(exp, breakIndex, end, localValue);
+            return leftValue + rightValue;
+        }
+        else if (exp.startsWith(mult, start)) {
+            int nextIndex = start + 5;
+            int breakIndex = findBreakOfParallelExp(exp, nextIndex, end);
+            int leftValue = evaluate(exp, nextIndex, breakIndex -1 , localValue);
+            int rightValue = evaluate(exp, breakIndex, end, localValue);
+            return leftValue * rightValue;
+        }
+        else if (exp.startsWith(let, start)){
+            int nextIndex = start + 4;
+            List<Integer> breakIndex = parseLetBreakIndex(exp, nextIndex, end);
+            int lastStart = nextIndex;
+            Map<String, Integer> backup = new HashMap<>(localValue);
+
+            for (int i = 0; i + 1 < breakIndex.size(); i += 2) {
+                updateLetVariable(exp, lastStart, breakIndex.get(i), breakIndex.get(i + 1), backup);
+                lastStart = breakIndex.get(i+1);
+            }
+
+            int lastIndex = breakIndex.get(breakIndex.size() - 1);
+            int value = evaluate(exp, lastIndex, end, new HashMap<>(backup));
+
+            return value;
         }
         else {
-            String state = getState(curPos, grid);
-            if (cache.containsValue(state)) {
-                return cache.get(state);
+            // no operator.
+            // still need to parse out something, for an integer
+            boolean hasSym = false;
+            for (int i = start; i <= end; i++) {
+                if (exp.charAt(i) >= 'a' && exp.charAt(i) <= 'z') {
+                    hasSym = true;
+                    break;
+                }
+            }
+
+            if (!hasSym) {
+                return Integer.parseInt(exp.substring(start, end + 1).trim());
+            } else {
+                return localValue.get(exp.substring(start, end + 1).trim());
+            }
+        }
+    }
+    public void updateLetVariable(String exp, int start, int middle, int end,Map<String, Integer> localValue) {
+        String sym = exp.substring(start, middle).trim();
+        int value = evaluate(exp, middle, end - 1, localValue);
+        localValue.put(sym.trim(), value);
+    }
+    public List<Integer> parseLetBreakIndex(String exp, int nextIndex, int end) {
+        List<Integer> res = new ArrayList<>();
+        int i = nextIndex;
+        while(i <= end) {
+            char c = exp.charAt(i);
+            if (c == ' ') {
+                i++;
+                res.add(i);
+            }
+            else if (c == '('){
+                i = parPair.get(i) + 1;
             }
             else {
-                int path = 0;
-                int h = grid.length;
-                int w = grid[0].length;
-                int x = curPos/w;
-                int y = curPos%w;
-
-                for (int d = 0; d < 4; d++) {
-                    int newX = x + dxy[d];
-                    int newY = y + dxy[d+1];
-                    if (newX < 0 || newX >= h || newY < 0 || newY >= w || grid[newX][newY] == -1 || grid[newX][newY] == 1) continue;
-
-                    if (grid[newX][newY] == 0) {
-                        grid[newX][newY] = -1;
-                        path += dfs(newX * w + newY, end, grid, count-1);
-                        grid[newX][newY] = 0;
-                    }
-                    else if (grid[newX][newY] == 2){
-                        if (count == 0) {
-                            path++;
-                        }
-                    }
-                }
-
-                cache.put(state, path);
-
-                return path;
+                i++;
             }
         }
-    }
 
-    private String getState(int curPos, int[][] grid) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(curPos).append(" ");
-        for (int i = 0; i < grid.length; i++) {
-            for (int j = 0; j < grid[0].length; j++) {
-                sb.append(grid[i][j]);
-            }
-        }
-        return sb.toString();
-    }
-
-    Map<TreeNode, Integer> neededCoin;
-    Map<TreeNode, Integer> hasCoin;
-    int res = 0;
-    public int distributeCoins(TreeNode root) {
-        neededCoin = new HashMap<>();
-        hasCoin = new HashMap<>();
-
-        fillNeededMap(root);
-        fillHashCoinMap(root);
-        
-        helper(root);
         return res;
     }
-
-    private void helper(TreeNode root) {
-        if (root == null) return;
-        if (neededCoin.get(root) == hasCoin.get(root)) {
-            helper(root.left);
-            helper(root.right);
-
-        }
-        else {
-            int neededRootMove = Math.abs(neededCoin.get(root) - hasCoin.get(root));
-
-            res+=neededRootMove;
-            helper(root.left);
-            helper(root.right);
-        }
-    }
-
-    private int fillHashCoinMap(TreeNode root) {
-        if (root == null) return 0;
-        int cur = root.val;
-        int left = root.left == null ? 0 : fillHashCoinMap(root.left);
-        int right = root.right == null ? 0 : fillHashCoinMap(root.right);
-        hasCoin.put(root, cur + left + right);
-
-        return cur + left + right;
-    }
-
-    private int fillNeededMap(TreeNode root) {
-        if (root == null) return 0;
-        int cur = 1;
-        int left = root.left == null ? 0 : fillNeededMap(root.left);
-        int right = root.right == null ? 0 : fillNeededMap(root.right);
-        neededCoin.put(root, cur + left + right);
-
-        return cur + left + right;
-    }
-
-    public int maxTurbulenceSize(int[] A) {
-        int best = 1;
-        int cur = 1;
-        for (int i = 0; i < A.length - 1; i++) {
-            if (i == 0) {
-                if (A[i] == A[i+1])
-                    continue;
-                else {
-                    cur++;
-                }
-            }
-            else {
-                if (A[i] == A[i+1]) {
-                    cur = 1;
-                }
-                else if (A[i] < A[i+1]) {
-                    if (A[i] < A[i-1]) {
-                        cur++;
-                    }
-                    else {
-                        cur = 2;
-                    }
-                }
-                else if (A[i] > A[i+1]) {
-                    if (A[i] > A[i-1]) {
-                        cur++;
-                    }
-                    else {
-                        cur = 2;
-                    }
-                }
-            }
-
-            best = Math.max(cur, best);
+    public int findBreakOfParallelExp(String exp, int nextIndex, int end) {
+        if (exp.charAt(nextIndex) == '(') {
+            return parPair.get(nextIndex) + 1;
         }
 
-        return best;
+        int nextSpace = exp.indexOf(" ", nextIndex);
+        return nextSpace + 1;
     }
-
-    public int[] sortedSquares(int[] A) {
-        for (int i = 0; i < A.length; i++) {
-            A[i] = A[i] * A[i];
-        }
-
-        Arrays.sort(A);
-        return A;
-    }
-
-    public List<String> findAndReplacePattern(String[] words, String pattern) {
-        List<String> res = new LinkedList<>();
+    public int expressiveWords(String S, String[] words) {
+        List<Node> sString = parseOutString(S);
+        int res = 0;
         for (String w : words) {
-            if (isBiject(w, pattern)) {
-                res.add(w);
-            }
+            if (w.length() > S.length()) continue;
+
+            List<Node> queryString = parseOutString(w);
+            if (canExtended(queryString, sString)) 
+                res++;
         }
         return res;
     }
-    private boolean isBiject(String w, String pattern) {
-        Map<Character, Character> patternToWord = new HashMap<>();
-        for (int i = 0; i < pattern.length(); i++) {
-            char pc = pattern.charAt(i);
-            char wc = w.charAt(i);
-            if (patternToWord.containsKey(pc)) {
-                if (patternToWord.get(pc) != wc) return false;
-            }
-            else if (patternToWord.containsValue(wc)){
-                return false;
-            }
-            else {
-                patternToWord.put(pc, wc);
+    private boolean canExtended(List<Node> queryString, List<Node> targetString) {
+        if (queryString.size() != targetString.size()) return false;
+        for (int i = 0; i < queryString.size(); i++) {
+            Node query = queryString.get(i);
+            Node target = targetString.get(i);
+            if (query.c != target.c) return false;
+            if (query.count > target.count) return false;
+            if (target.count < 3) {
+                if (target.count != query.count) return false;
             }
         }
 
         return true;
     }
-    public int numSpecialEquivGroups(String[] A) {
-        Set<String> set = new HashSet<>();
-        for (String a : A) {
-            set.add(encode(a));
+    private List<Node> parseOutString(String s) {
+        List<Node> res = new ArrayList<>();
+        int i = 0;
+        while(i < s.length()) {
+            int j = i;
+            while(j < s.length() && s.charAt(i) == s.charAt(j))
+                j++;
+
+            res.add(new Node(s.charAt(i), j - i));
+
+            i = j;
         }
 
-        return set.size();
+        return res;
     }
-    private String encode(String a) {
-        List<Character> even = new LinkedList<>();
-        for (int i = 0; i < a.length(); i += 2) {
-            even.add(a.charAt(i));
+    class Node{
+        char c;
+        int count;
+        public Node(char c, int count){
+            this.c = c;
+            this.count = count;
         }
-
-        List<Character> odd = new LinkedList<>();
-        for (int i = 1; i < a.length(); i+=2) {
-            odd.add(a.charAt(i));
-        }
-
-        Collections.sort(even);
-        Collections.sort(odd);
-
+    }
+    public String toGoatLatin(String S) {
+        String[]words = S.split(" ");
         StringBuilder sb = new StringBuilder();
-        for (Character e : even) sb.append(e);
-        sb.append("-");
-        for (Character o : odd) sb.append(o);
+        String aSeq = "a";
+        for (int i = 0; i < words.length; i++) {
+            String cur = words[i];
+            char c = cur.charAt(0);
+            StringBuilder curWord = new StringBuilder();
+            if (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u'
+            || c == 'A' || c == 'E' || c == 'I' || c == 'O' || c == 'U') {
+                curWord.append(cur).append("ma");
+            }
+            else {
+                curWord = new StringBuilder(cur.substring(1)).append(c).append("ma");
+            }
+
+            curWord.append(aSeq);
+            aSeq += "a";
+            if (sb.length() == 0) {
+                sb.append(curWord);
+            }
+            else {
+                sb.append(" ").append(curWord);
+            }
+        }
 
         return sb.toString();
+    }
+    public int numFriendRequests(int[] ages) {
+        int count[] = new int[121];
+        for (int a : ages)
+            count[a]++;
+
+        int res = 0;
+        for (int base = 15; base <= 120; base++) {
+            for (int other = base/2 + 7 + 1; other <= base; other++) {
+                if (base >= 100 || other <= 100) {
+                    if (base == other) {
+                        if (count[base] > 1) {
+                            res += count[base] * (count[base] - 1);
+                        }
+                    }
+                    else {
+                        res += count[base] * count[other];
+                    }
+                }
+            }
+        }
+
+        return res;
+    }
+    public int superEggDrop(int K, int N) {
+        int[][]dp = new int[K+1][N+1]; // k eggs, n floors
+        for (int n = 1; n <= N; n++) {
+            for (int k = 1; k <= K; k++) {
+                if (n == 1) {
+                    dp[k][n] = 1;
+                }
+                else if (k == 1) {
+                    dp[k][n] = n;
+                }
+                else {
+                    int half = n/2;
+                    int lower = n%2==1 ? half : half - 1;
+                    int higher = half;
+                    int broken = 1 + dp[k-1][lower];
+                    int nonbroken = 1 + dp[k][higher];
+                    dp[k][n] = Math.max(broken, nonbroken);
+                }
+            }
+        }
+
+        int best = Integer.MAX_VALUE;
+        for (int k = 1; k <= K; k++) {
+            best = Math.min(dp[k][N], best);
+        }
+
+        return best;
     }
 }
 
