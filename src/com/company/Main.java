@@ -3,138 +3,224 @@ package com.company;
 import java.util.*;
 
 public class Main {
-    public static void main(String[] args) {
-        new Demo();
-        new Demo();
-        new Demo();
+    public static void main(String[] args) throws Exception {
+        int x = new Solution().countTriplets(new int[]{4,13,10,12});
+        System.out.println(x);
     }
 }
 
-class Demo{
-    protected void finalize(){
-
+class TimeMap {
+    Map<String, TreeMap<Integer, String>> map;
+    /** Initialize your data structure here. */
+    public TimeMap() {
+        map = new HashMap<>();
     }
 
+    public void set(String key, String value, int timestamp) {
+        if (map.containsValue(key)) {
+            map.get(key).put(timestamp, value);
+        }
+        else {
+            map.put(key, new TreeMap<>());
+            map.get(key).put(timestamp, value);
+        }
+    }
+
+    public String get(String key, int timestamp) {
+        if (!map.containsKey(key)) return "";
+        else {
+            TreeMap<Integer, String> tree = map.get(key);
+            Integer floor = tree.floorKey(timestamp);
+            if (floor == null) return "";
+            else {
+                return tree.get(floor);
+            }
+        }
+    }
 }
 
-class Solution {
-    int mod = 1_000_000_007;
-    public List<String> ipToCIDR(String ip, int n) {
-        long start = 0;
-        for (String s : ip.split("\\.")) {
-            start = start * 256 + Integer.parseInt(s);
+class Solution{
+    public int countTriplets(int[] A) {
+        int res = 0;
+        int len = A.length;
+        int max = 65536;
+        int[][]dp = new int[len][max]; // two element AND result j count at most index i
+        res += findOne(A);
+        res += findTwo(A);
+
+        for (int i = 0; i < len; i++) {
+            if (i != 0) {
+                for (int j = 0; j < max; j++)
+                    dp[i][j] = dp[i-1][j];
+            }
+
+            for (int j = 0; j < i; j++) {
+                dp[i][A[i] & A[j]]+=2;
+            }
         }
 
-        List<String> res = new ArrayList<>();
-        while(n > 0) {
-            int num = Math.min((int)(start & -start), Integer.highestOneBit(n));
-
-            res.add(getCIDR(start, num));
-
-            start += num;
-            n -= num;
+        for (int i = 2; i < len; i++) {
+            for (int j = 0; j < max; j++) {
+                if ((j & A[i]) == 0) {
+                    res += 3*dp[i-1][j];
+                }
+            }
         }
 
         return res;
     }
 
-    private String getCIDR(long start, int step) {
-        int[] ans = new int[4];
-        ans[0] = (int) (x & 255); x >>= 8;
-        ans[1] = (int) (x & 255); x >>= 8;
-        ans[2] = (int) (x & 255); x >>= 8;
-        ans[3] = (int) x;
-        int len = 33;
-        while (step > 0) {
-            len --;
-            step /= 2;
+    private int findTwo(int[] a) {
+        int res = 0;
+        for (int i = 0; i < a.length; i++) {
+            for (int j = 0; j < i; j++) {
+                if ((a[i] & a[j]) == 0)
+                    res += 6;
+            }
         }
-        return ans[3] + "." + ans[2] + "." + ans[1] + "." + ans[0] + "/" + len;
+
+        return res;
     }
 
-    Map<Integer, Integer> parenthesisPair;
-    public int calculate(String s) {
-        s = s.replaceAll(" ", "");
-        parenthesisPair = new HashMap<>();
-        Stack<Integer> stack = new Stack<>();
-        for (int i = 0; i < s.length(); i++) {
-            char c = s.charAt(i);
-            if (c == '(') stack.push(i);
-            else if (c == ')'){
-                parenthesisPair.put(stack.pop(), i);
-            }
+    private int findOne(int[] a) {
+        int res = 0;
+        for (int i : a){
+            if (i == 0) res++;
         }
 
-        return (int)evalaute(s, 0, s.length() - 1);
+        return res;
     }
 
-    private long evalaute(String s, int start, int end) {
 
-        if (start > end) return 0;
-        //System.out.println("eva" + s.substring(start, end + 1));
-        if (s.charAt(start) == '(' && parenthesisPair.get(start) == end) {
-            return evalaute(s, start + 1, end - 1);
+    public int mincostTickets(int[] days, int[] costs) {
+        int len = days.length;
+        int[][]dp = new int[len][31];
+        Map<Integer, Integer> dayToIndex = new HashMap<>();
+        for (int i = 0; i < days.length; i++) {
+            dayToIndex.put(days[i], i);
         }
 
-        boolean isAllDigit = true;
-        for (int i = start; i <= end; i++) {
-            if (!Character.isDigit(s.charAt(i))){
-                isAllDigit = false;
-                break;
+        for (int i = 0; i < len; i++) {
+            Arrays.fill(dp[i], -1);
+        }
+
+        dp[0][1] = costs[0];
+        dp[0][7] = costs[1];
+        dp[0][30] = costs[2];
+
+        for (int i = 1; i < len; i++) {
+            int lastIndexMin = Integer.MAX_VALUE;
+            for (int j = 1; j <= 30; j++) {
+                if (dp[i-1][j] != -1) {
+                    lastIndexMin = Math.min(lastIndexMin, dp[i-1][j]);
+                }
+            }
+
+            for (int j = 1; j <= 30; j++) {
+                if (j == 1) dp[i][j] = lastIndexMin + costs[0];
+                else if (j == 7) dp[i][j] = lastIndexMin + costs[1];
+                else if (j == 30) dp[i][j] = lastIndexMin + costs[2];
+
+                for (int prev = 1; prev <= 29 && days[i] - prev >= 1; prev++) {
+                    int ealierDay = days[i] - prev;
+                    if (dayToIndex.containsKey(ealierDay)) {
+                        int earilerIndex = dayToIndex.get(ealierDay);
+                        int needPass = j + prev;
+                        if (needPass <= 30 && dp[earilerIndex][needPass] != -1) {
+                            if (dp[i][j] == -1) dp[i][j] = dp[earilerIndex][needPass];
+                            else {
+                                dp[i][j] = Math.min(dp[i][j], dp[earilerIndex][needPass]);
+                            }
+                        }
+                    }
+                }
+
             }
         }
 
-        if (isAllDigit) {
-            return Long.parseLong(s.substring(start, end + 1));
+        int best = Integer.MAX_VALUE;
+        for (int i = 1; i <= 30; i++) {
+            if (dp[len - 1][i] != -1) {
+                best = Math.min(best, dp[len - 1][i]);
+            }
         }
 
-        int lastOperatorIndex = findIndex(s, start, end);
-        char op = s.charAt(lastOperatorIndex);
-        long left = evalaute(s, start, lastOperatorIndex - 1);
-        long right = evalaute(s, lastOperatorIndex + 1, end);
-
-        if (op == '+') {
-            return left + right;
-        }
-        else if (op == '-') {
-            return left - right;
-        }
-        else if (op == '*') {
-            return left*right;
-        }
-        else {
-            return left/right;
-        }
+        return best;
     }
 
-    private int findIndex(String s, int start, int end) {
-        int lastOpIndex = -1;
-        int i = start;
-        while(i <= end) {
-            char c = s.charAt(i);
-            if (c == '(') {
-                i = parenthesisPair.get(i) + 1;
+
+
+    public String strWithout3a3b(int A, int B) {
+        StringBuilder sb = new StringBuilder();
+        var x = StringBuilder.class;
+        while(A > 0 || B > 0) {
+            if (A > B) {
+                if (canAppend(sb, 'a')) {
+                    sb.append("a");
+                    A--;
+                }
+                else {
+                    sb.append("b");
+                    B--;
+                }
             }
-            else if (c == '+'){
-                return i;
+            else if (A < B){
+                if (canAppend(sb, 'b')) {
+                    sb.append('b');
+                    B--;
+                }
+                else {
+                    sb.append('a');
+                    A--;
+                }
             }
-            else if (c == '-') {
-                lastOpIndex = i;
-                i++;
-            }
-            else if (c == '*' || c == '/') {
-                if (lastOpIndex == -1 || s.charAt(lastOpIndex) != '-') lastOpIndex = i;
-                i++;
-            }
-            else {
-                i++;
+            else { // A==B
+                if (sb.length() == 0 || sb.charAt(sb.length() - 1) == 'a') {
+                    sb.append('b');
+                    B--;
+                }
+                else {
+                    sb.append('a');
+                    A--;
+                }
             }
         }
 
-        return lastOpIndex;
+        return sb.toString();
+    }
+
+    private boolean canAppend(StringBuilder sb, char c) {
+        if (sb.length() <= 1) return true;
+        char last2 = sb.charAt(sb.length() - 2);
+        char last1 = sb.charAt(sb.length() - 1);
+        if (last1 != last2) return true;
+
+        if (last1 == c && last2 == c) return false;
+        return true;
     }
 }
 
+
+class Demo implements Runnable {
+    private String name;
+    public Demo(String name) throws InterruptedException {
+        //super(name);
+        Thread.sleep(10000);
+        this.name = name;
+    }
+
+    public void show(){
+        for (int i = Integer.MIN_VALUE; i < Integer.MAX_VALUE; i++) {
+            for (int j = Integer.MIN_VALUE; j < Integer.MAX_VALUE; j++) {}
+        }
+        for (int x = 0; x < 10; x++)
+            System.out.println(Thread.currentThread().getName() + " = " +x);
+    }
+
+    public void run(){
+        this.show();
+    }
+}
 class RangeModule {
     TreeMap<Integer, Integer> tree;
 
@@ -191,7 +277,6 @@ class RangeModule {
         tree.keySet().removeAll(subMap.keySet());
     }
 }
-
 class Interval {
     int start;
     int end;
@@ -217,7 +302,6 @@ class Interval {
         return this.start;
     }
 }
-
 class SegmentTreeNode {
     Interval interval;
     SegmentTreeNode left;
@@ -227,7 +311,6 @@ class SegmentTreeNode {
     }
 
 }
-
 class TreeNode {
      int val;
       TreeNode left;
